@@ -11,7 +11,7 @@ local fetch = args.fetch
 -- 1. Cargar Project UAI
 -- ─────────────────────────────────────────────
 
-local BASE = "https://raw.githubusercontent.com/marblack-o/Capri-script/main/"
+local UAI_URL = "https://raw.githubusercontent.com/Project-Ptolemy/ProjectUAI/main/dist/uai.lua"
 
 print("[Capri] Cargando Project UAI...")
 

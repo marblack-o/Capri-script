@@ -1,25 +1,43 @@
 --[[
   Capri × Project UAI
-  Loader — ejecuta esto con loadstring
+  Loader
 
   Uso:
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/TU_USUARIO/capri-uai/main/loader.lua"))()
-
-  Las API keys / providers se configuran DESPUÉS de que cargue el panel
-  (desde el propio panel de Capri o desde la UI de Project UAI).
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/marblack-o/Capri-script/main/loader.lua"))()
 ]]
 
 local BASE = "https://raw.githubusercontent.com/marblack-o/Capri-script/main/"
 
--- Cambia esta URL cuando subas el repo a tu GitHub
--- Ejemplo: https://raw.githubusercontent.com/tuuser/capri-uai/main/
+local function httpGet(url)
+    -- 1) game:HttpGet
+    local ok, res = pcall(function()
+        return game:HttpGet(url)
+    end)
+    if ok and res and res \~= "" then
+        return res
+    end
+
+    -- 2) syn.request / http.request / request (ejecutores)
+    local req = (syn and syn.request) or (http and http.request) or request
+    if req then
+        local ok2, res2 = pcall(function()
+            local r = req({ Url = url, Method = "GET" })
+            return r and (r.Body or r.body)
+        end)
+        if ok2 and res2 and res2 \~= "" then
+            return res2
+        end
+    end
+
+    return nil
+end
 
 local function fetch(path)
-    local ok, result = pcall(function()
-        return game:HttpGet(BASE .. path)
-    end)
-    if not ok or not result or result == "" then
-        error("[Capri] No se pudo descargar: " .. path .. "\nRevisa que el repo sea público y la URL sea correcta.")
+    local url = BASE .. path
+    print("[Capri] Descargando:", url)
+    local result = httpGet(url)
+    if not result then
+        error("[Capri] No se pudo descargar: " .. path .. "\nURL: " .. url .. "\nPrueba de nuevo o usa el loader all-in-one.")
     end
     return result
 end

@@ -9,7 +9,7 @@
   (desde el propio panel de Capri o desde la UI de Project UAI).
 ]]
 
-local BASE = "https://raw.githubusercontent.com/TU_USUARIO/capri-uai/main/"
+local BASE = "https://raw.githubusercontent.com/marblack-o/Capri-script/main/"
 
 -- Cambia esta URL cuando subas el repo a tu GitHub
 -- Ejemplo: https://raw.githubusercontent.com/tuuser/capri-uai/main/

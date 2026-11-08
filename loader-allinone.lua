@@ -726,7 +726,7 @@ Do not use READY_FOR_MISSION until the goal is clear enough to execute.
         end
     end
 
-    local function sendMessage(text)
+        local function sendMessage(text)
         text = (text or ""):gsub("^%s+", ""):gsub("%s+$", "")
         if text == "" or busy then return end
         busy = true
@@ -735,7 +735,7 @@ Do not use READY_FOR_MISSION until the goal is clear enough to execute.
         table.insert(history, { role = "user", content = text })
 
         task.spawn(function()
-            -- While mission runs, normal chat only (Capri)
+            -- Si ya estamos en modo de clarificación de misión
             if mode == "clarifying" then
                 setStatus("pensando...")
                 handleClarify(text)
@@ -743,26 +743,39 @@ Do not use READY_FOR_MISSION until the goal is clear enough to execute.
                 return
             end
 
-            if mode == "idle" and looksLikeMission(text) and not missionRunning then
+            -- NUEVO: Detectar comando con "!" para iniciar una misión
+            local isCommand = text:sub(1, 1) == "!"
+            if mode == "idle" and isCommand and not missionRunning then
+                local cleanText = text:sub(2):gsub("^%s+", ""):gsub("%s+$", "")
+                if cleanText == "" then
+                    addBubble("assistant", "¡Ey, pon algo después del '!' para saber qué hacer, choom!")
+                    busy = false
+                    setStatus("ia conectada")
+                    return
+                end
+
                 mode = "clarifying"
                 clarifyCount = 0
                 missionBrief = {
-                    original = text,
+                    original = cleanText,
                     answers = {},
-                    kind = detectKind(text),
+                    kind = detectKind(cleanText),
                 }
                 setStatus("aclarando misión")
+                
                 local sys = CAPRI_PROMPT .. [[
 
-The user asked for something that needs the Roblox agent (UAI).
+The user invoked a mission command using '!'.
 Before starting, ask ONE short clarifying question in character if anything is ambiguous
 (target, scope, style, constraints). If already crystal clear, reply with first line READY_FOR_MISSION
 then a short Capri confirmation.
 Max total clarifying questions allowed later: ]] .. tostring(MAX_CLARIFY) .. "."
+
                 local msgs = {
                     { role = "system", content = sys },
-                    { role = "user", content = text },
+                    { role = "user", content = cleanText },
                 }
+                
                 local reply, err = groqChat(API_KEY, msgs, 300)
                 if not reply then
                     addBubble("assistant", "No pude armar la misión (" .. tostring(err) .. ").")
@@ -771,6 +784,7 @@ Max total clarifying questions allowed later: ]] .. tostring(MAX_CLARIFY) .. "."
                     busy = false
                     return
                 end
+                
                 if reply:find("READY_FOR_MISSION") then
                     local summary = reply:gsub("READY_FOR_MISSION", ""):gsub("^%s+", ""):gsub("%s+$", "")
                     if summary ~= "" then addBubble("assistant", summary) end
@@ -784,13 +798,14 @@ Max total clarifying questions allowed later: ]] .. tostring(MAX_CLARIFY) .. "."
                 return
             end
 
-            -- Normal Capri chat (also while mission runs in background)
+            -- Chat normal de Capri (cuando no usas '!')
             setStatus(missionRunning and "misión + charla" or "pensando...")
             local msgs = { { role = "system", content = CAPRI_PROMPT } }
             for _, m in ipairs(history) do table.insert(msgs, m) end
             if missionRunning then
                 table.insert(msgs, { role = "system", content = "A background mission is running. You can still chat casually. Don't pretend the mission finished." })
             end
+            
             local reply, err = groqChat(API_KEY, msgs, 400)
             if not reply then
                 addBubble("assistant", "Falló la IA (" .. tostring(err) .. ").")
@@ -800,10 +815,12 @@ Max total clarifying questions allowed later: ]] .. tostring(MAX_CLARIFY) .. "."
                 addBubble("assistant", reply)
                 setStatus(missionRunning and "misión en curso" or "ia conectada")
             end
+            
             while #history > 20 do table.remove(history, 1) end
             busy = false
         end)
-    end
+  end
+  
 
     sendBtn.MouseButton1Click:Connect(function() sendMessage(inputBox.Text) end)
     inputBox.FocusLost:Connect(function(enter) if enter then sendMessage(inputBox.Text) end end)

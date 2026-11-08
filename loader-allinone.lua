@@ -36,6 +36,48 @@ local function httpRequest(opts)
     end
     return nil
 end
+-- ═══════════════════════════════════════════
+-- GESTOR DE ASSETS (Inspirado en Capri Desktop)
+-- ═══════════════════════════════════════════
+
+local GITHUB_ASSET_URL = "https://raw.githubusercontent.com/marblack-o/Capri-script/main/assets/"
+
+local function loadAsset(fileName)
+    local localPath = "CapriAsset_" .. fileName
+    -- Verificamos si ya existe localmente en el ejecutor
+    if type(isfile) == "function" and not isfile(localPath) then
+        local success, res = pcall(function()
+            return game:HttpGet(GITHUB_ASSET_URL .. fileName)
+        end)
+        if success and res and res ~= "404: Not Found" then
+            writefile(localPath, res)
+        else
+            warn("[Capri] No se pudo descargar el asset: " .. fileName)
+            return ""
+        end
+    end
+    
+    -- Convertimos el archivo local a un enlace que Roblox pueda renderizar
+    local ok, assetId = pcall(function()
+        return getcustomasset(localPath)
+    end)
+    return ok and assetId or ""
+end
+
+-- Tabla completa con todas las expresiones y recortes del proyecto original
+local CapriAssets = {
+    Cutout    = loadAsset("capri-cutout.png"),
+    Face      = loadAsset("capri-face.png"),
+    FaceLaugh = loadAsset("face-laugh.png"),
+    FaceLook  = loadAsset("face-look.png"),
+    FaceMany  = loadAsset("face-many.png"),
+    FaceWide  = loadAsset("face-wide.png"),
+    FaceAside = loadAsset("face-aside.png"),
+    FaceCalm  = loadAsset("face-calm.png"),
+    Grin      = loadAsset("cutin-grin.png"),
+    Eyes      = loadAsset("cutin-eyes.png"),
+    Laugh     = loadAsset("cutin-laugh.png"),
+}
 
 -- ═══════════════════════════════════════════
 -- LOCAL CONFIG

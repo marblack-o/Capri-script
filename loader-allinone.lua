@@ -1,6 +1,3 @@
--- PARTE 1/10
-Capri × Project UAI — ALL-IN-ONE v4
-Código Lua completo
 --[[
   Capri × Project UAI — ALL-IN-ONE (v4 Mission + GitHub Assets)
   - Setup Groq key (local)
@@ -55,7 +52,7 @@ local function loadAsset(fileName)
             return ""
         end
     end
-
+    
     local ok, assetId = pcall(function()
         return getcustomasset(localPath)
     end)
@@ -184,7 +181,7 @@ local function showSetup(onDone)
     sub.TextXAlignment = Enum.TextXAlignment.Left
     sub.ZIndex = 51
     sub.Parent = setup
-  -- PARTE 2/10
+
     local keyBox = Instance.new("TextBox")
     keyBox.Size = UDim2.new(1, -24, 0, 40)
     keyBox.Position = UDim2.fromOffset(12, 100)
@@ -339,8 +336,6 @@ local function runUAIMission(missionPrompt, onComplete)
                     end
                 end,
             })
-        
--- PARTE 3/10
             task.delay(240, function()
                 if not done then
                     done = true
@@ -444,7 +439,7 @@ local function startCapri(API_KEY)
     plate.ZIndex = 21
     plate.Parent = panel
     Instance.new("UICorner", plate).CornerRadius = UDim.new(0, 8)
-  -- PARTE 4/10
+
     local header = Instance.new("Frame")
     header.Size = UDim2.new(1, 0, 0, 48)
     header.BackgroundTransparency = 1
@@ -577,7 +572,7 @@ local function startCapri(API_KEY)
     Instance.new("UICorner", sendBtn).CornerRadius = UDim.new(0, 6)
 
     local panelOpen = false
-  -- PARTE 5/10
+
     local function setStatus(txt) status.Text = txt end
 
     local function addBubble(role, text)
@@ -698,8 +693,8 @@ local function startCapri(API_KEY)
                 setStatus("misión fallida")
                 addBubble("assistant", "La misión se torció: " .. tostring(resultText))
                 return
-        end
-        -- PARTE 6/10
+            end
+
             if missionKind == "research" then
                 setStatus("traduciendo...")
                 local rewriteMsgs = {
@@ -718,7 +713,7 @@ local function startCapri(API_KEY)
                 addBubble("assistant", "Tu petición ha terminado, choom.\n" .. tostring(resultText))
             end
         end)
-    end
+  end
 
     local function handleClarify(userText)
         table.insert(missionBrief.answers, userText)
@@ -795,7 +790,7 @@ Do not use READY_FOR_MISSION until the goal is clear enough to execute.
                     kind = detectKind(cleanText),
                 }
                 setStatus("aclarando misión")
-
+                
                 local sys = CAPRI_PROMPT .. [[
 
 The user invoked a mission command using '!'.
@@ -808,7 +803,7 @@ Max total clarifying questions allowed later: ]] .. tostring(MAX_CLARIFY) .. "."
                     { role = "system", content = sys },
                     { role = "user", content = cleanText },
                 }
-
+                
                 local reply, err = groqChat(API_KEY, msgs, 300)
                 if not reply then
                     addBubble("assistant", "No pude armar la misión (" .. tostring(err) .. ").")
@@ -817,7 +812,7 @@ Max total clarifying questions allowed later: ]] .. tostring(MAX_CLARIFY) .. "."
                     busy = false
                     return
                 end
-
+                
                 if reply:find("READY_FOR_MISSION") then
                     local summary = reply:gsub("READY_FOR_MISSION", ""):gsub("^%s+", ""):gsub("%s+$", "")
                     if summary ~= "" then addBubble("assistant", summary) end
@@ -829,15 +824,15 @@ Max total clarifying questions allowed later: ]] .. tostring(MAX_CLARIFY) .. "."
                 end
                 busy = false
                 return
-        end
-        -- PARTE 7/10
+            end
+
             setStatus(missionRunning and "misión + charla" or "pensando...")
             local msgs = { { role = "system", content = CAPRI_PROMPT } }
             for _, m in ipairs(history) do table.insert(msgs, m) end
             if missionRunning then
                 table.insert(msgs, { role = "system", content = "A background mission is running. You can still chat casually. Don't pretend the mission finished." })
             end
-
+            
             local reply, err = groqChat(API_KEY, msgs, 400)
             if not reply then
                 addBubble("assistant", "Falló la IA (" .. tostring(err) .. ").")
@@ -847,7 +842,7 @@ Max total clarifying questions allowed later: ]] .. tostring(MAX_CLARIFY) .. "."
                 addBubble("assistant", reply)
                 setStatus(missionRunning and "misión en curso" or "ia conectada")
             end
-
+            
             while #history > 20 do table.remove(history, 1) end
             busy = false
         end)
@@ -872,7 +867,7 @@ if type(cfg.model) == "string" and cfg.model ~= "" then
         API_MODEL = cfg.model
     end
 end
--- PARTE 8/10
+
 local savedKey = cfg.groq_key
 if type(savedKey) == "string" and savedKey ~= "" then
     print("[Capri] Key local OK.")

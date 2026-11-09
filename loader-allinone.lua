@@ -1,26 +1,6 @@
 --[[
-  Capri × Project UAI — v5 Animated loader
+  Capri loader — temporal
+  Sube src/capri_part1.lua, part2 y part3 desde el ZIP v5, luego este loader funcionará.
+  Mientras tanto, usa el ZIP local o espera el upload completo.
 ]]
-print("[Capri] Iniciando v5 (animada)...")
-local BASE = "https://raw.githubusercontent.com/marblack-o/Capri-script/main/"
-local function fetch(path)
-    local ok, body = pcall(function() return game:HttpGet(BASE .. path) end)
-    if not ok or not body or body == "" then
-        -- fallback request APIs
-        local req = (syn and syn.request) or (http and http.request) or request
-        if req then
-            local ok2, res = pcall(req, {Url = BASE .. path, Method = "GET"})
-            if ok2 and res and (res.Body or res.body) then
-                body = res.Body or res.body
-            end
-        end
-    end
-    if not body or body == "" then
-        error("[Capri] No se pudo descargar " .. path)
-    end
-    return body
-end
-local src = fetch("src/capri_part1.lua") .. fetch("src/capri_part2.lua") .. fetch("src/capri_part3.lua")
-local fn, err = loadstring(src)
-if not fn then error("[Capri] compile: " .. tostring(err)) end
-fn()
+error("[Capri] Faltan src/capri_part1-3.lua en el repo. Sube el ZIP v5 (capri_part1/2/3) a /src y vuelve a ejecutar.")

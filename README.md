@@ -1,66 +1,116 @@
-# Capri × Project UAI
+# Capri-script
 
-Capri (Cyberpunk: Edgerunners 2) como compañera dentro de Roblox, usando **Project UAI** como cerebro y tools.
+Asistente **dentro de Roblox** inspirado en Capri (Project Capricorn / *Cyberpunk: Edgerunners*), pensado para charlar y lanzar misiones sobre **el juego en el que estás ahora** (este DataModel).
 
-## Qué incluye
+No es la app de escritorio ni un cliente Android: es un **script de executor** (Delta u otro con `HttpGet` + `loadstring`) que combina:
 
-- **Sprite flotante** de Capri (arrastrable)
-- **Chat rápido** estilo Capri: click en ella → se despliega el panel → hablas y te responde como Capri
-- Personalidad completa (chaos gremlin, teasing, slang de Night City, leal, anti-corpo)
-- Integración con **Project UAI** (tools del juego, agentes, etc.)
-- Las **API keys se configuran después** de cargar el panel (no van en el código)
+- **Capri** → personalidad, chat rápido y animaciones ligeras  
+- **Groq** → la voz del chat (API key tuya, local)  
+- **Project UAI** → herramientas para leer/modificar el juego en misiones (`!...`)
 
-## Cómo usarlo
+Proyecto **fan, no oficial y open source**: cualquiera puede usarlo, copiarlo, mejorarlo o adaptarlo. No busca ser exclusivo; si se puede mejorar, bienvenido.
 
-### 1. Sube esto a GitHub
+---
 
-Crea un repo público (ej. `capri-uai`) y sube la carpeta tal cual.
+## Qué hace
 
-### 2. Cambia la URL del loader
+| Modo | Comportamiento |
+|------|----------------|
+| **Chat libre** | Click en Capri → panel → hablas; responde con personalidad (Groq). |
+| **Misión** | Mensajes que empiezan con `!` (ej. `!analiza el juego`). Capri aclara solo si hace falta y manda el trabajo a **Project UAI** sobre **este** place. |
+| **UI** | Sprite arrastrable, caras por estado (idle / talk / misión / done / error), bob y cut-ins simples. |
 
-Abre `loader.lua` y cambia esta línea:
+- Las misiones entienden que *“el juego”* = la sesión actual de Roblox.  
+- En pedidos con panel/UI, el prompt a UAI incluye una spec básica de interfaz.  
+- La key de Groq **no va en el repo**: se pide al primer uso y se guarda en el executor (`capri_config.json`).
+
+---
+
+## Requisitos
+
+1. **Executor de Roblox** con al menos:
+   - `HttpGet` / `loadstring`
+   - Ideal: `writefile` / `readfile` / `isfile` (guardar key y assets)
+   - Ideal: `getcustomasset` (sprites locales)
+2. **API key de Groq** (tier gratis en [console.groq.com](https://console.groq.com))
+3. Para **misiones `!`**: [Project UAI](https://github.com/Project-Ptolemy/ProjectUAI) operativo en el mismo executor
+   - Primera vez: setup de storage / password (*Continue without encryption* o vault)
+   - Un **provider** configurado en UAI (modelo con tools)
+
+Sin UAI, el **chat de Capri** puede seguir funcionando; las misiones de juego no.
+
+---
+
+## Cómo ejecutarlo
+
+En el executor (partida / place):
 
 ```lua
-local BASE = "https://raw.githubusercontent.com/TU_USUARIO/capri-uai/main/"
+loadstring(game:HttpGet("https://raw.githubusercontent.com/marblack-o/Capri-script/main/loader-allinone.lua"))()
 ```
 
-por tu usuario/repo real.
+1. Si no hay key guardada, aparece el panel **Capri — Setup** → pegas la key de Groq → Continuar.  
+2. Click en Capri → chat.  
+3. Charla normal, o misión:
 
-### 3. Ejecuta en Delta (o cualquier executor)
-
-```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/TU_USUARIO/capri-uai/main/loader.lua"))()
+```text
+!analiza el juego
+!lista scripts importantes
+!crea un panel de stats del jugador
 ```
 
-### 4. Configura las keys
+Capri espera a que UAI **termine el turno** (no solo el primer borrador de texto).
 
-Una vez cargado:
+---
 
-1. Click en el círculo **C** (Capri)
-2. Se abre el chat rápido
-3. Configura providers / API keys desde la interfaz de Project UAI (si está disponible) o añade tu key cuando el sistema te lo pida
+## Estructura del repo
 
-Las keys **no** van dentro del código del repo.
-
-## Estructura
-
-```
-capri-uai/
-├── loader.lua          ← lo que ejecutas con loadstring
+```text
+Capri-script/
+├── loader-allinone.lua   ← lo que ejecutas (carga el core)
 ├── README.md
+├── assets/               ← caras / cut-ins (PNG)
 └── src/
-    └── host.lua        ← personalidad + UI + integración UAI
+    ├── capri_part1.lua     ← core partido (se concatena en runtime)
+    ├── capri_part2.lua
+    └── capri_part3.lua
 ```
 
-## Notas
+Forkea, cambia URLs si usas otro usuario/repo, y adapta a gusto.
 
-- Si Project UAI no carga, Capri sigue funcionando con respuestas locales de personalidad.
-- El panel es una versión ligera inspirada en el chat del APK de Capri Android.
-- El sprite actual es un placeholder ("C"). Puedes cambiar la imagen por un asset de Capri si tienes uno.
-- Compatible con Delta Executor y ejecutores que soporten `HttpGet` + `loadstring`.
+---
 
-## Créditos
+## Inspiración y créditos
 
-- Capri © CD PROJEKT RED / Trigger (personaje de Cyberpunk: Edgerunners 2)
-- Project UAI por Project-Ptolemy
-- Este host es un proyecto fan no oficial
+- **Capri / Project Capricorn** — personaje de *Cyberpunk: Edgerunners* (CD PROJEKT RED, Studio Trigger, Netflix). Este script es un **proyecto fan no oficial**, sin afiliación.
+- **[capri-desktop](https://github.com/mochiiwuff/capri-desktop)** (mochiiwuff) — compañera de escritorio que narra agentes de código; de ahí la idea de Capri como presencia + chat + “misión”. Su código tiene licencia propia (PolyForm Noncommercial); el artwork del personaje no es software libre.
+- Puertos / builds comunitarias tipo Capri Android — referencia de panel de chat rápido.
+- **[Project UAI](https://github.com/Project-Ptolemy/ProjectUAI)** (Project-Ptolemy) — agente con tools dentro de Roblox.
+
+Capri-script solo reutiliza la **idea de experiencia** y assets que tú subas a este repo; respeta siempre los derechos del personaje y las licencias de cada proyecto.
+
+---
+
+## Open source
+
+- Puedes **usar, modificar, forkar y redistribuir** este host.
+- Las mejoras de la comunidad son bienvenidas (issues / PR / forks).
+- **No subas API keys** al repo.
+- Posible publicación futura en directorios tipo ScriptBlox cuando esté más estable; el código seguirá siendo abierto aquí.
+
+---
+
+## Limitaciones honestas
+
+- Solo funciona con **executor** (no es un LocalScript de juego publicado por el creador del place).
+- Depende de Groq (chat) y, para misiones, de UAI + provider.
+- Las animaciones son ligeras (cambio de frames + tweens), no el motor WebGL de capri-desktop.
+- UAI puede pedir setup la primera vez; sin provider las misiones fallan con mensaje orientativo.
+
+---
+
+## Licencia / uso
+
+Fan project de código abierto orientado a uso personal y aprendizaje.  
+El personaje Capri y la franquicia Cyberpunk pertenecen a sus titulares.  
+Project UAI y capri-desktop tienen sus propios términos: cúmplelos si los usas junto a este script.

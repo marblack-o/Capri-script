@@ -1,17 +1,17 @@
 --[[
   loader-allinone.lua
   Que: bootstrap del host Capri modular.
-  Por que: un solo loadstring descarga modulos con nombre claro (no part1/part2).
+  Por que: un solo loadstring descarga modulos con nombre claro.
   Orden: Config -> Theme -> Assets -> UAIBridge -> Visual -> UI_Chat -> Hack -> App
 ]]
 
-print("[Capri] Loader modular v7.0.1...")
+print("[Capri] Loader modular v7.0.2...")
 
-local BASE = "https://raw.githubusercontent.com/marblack-o/Capri-script/main/"
-local VER = "7.0.1" -- cambia esto al actualizar modulos (evita cache de raw.githubusercontent)
+-- Pin al commit con Config.lua corregido (evita cache roto de raw/main)
+local BASE = "https://raw.githubusercontent.com/marblack-o/Capri-script/cb526c20ec865b040dca844407d3b081ee1d1183/"
 
 local function fetch(path)
-	local url = BASE .. path .. "?v=" .. VER
+	local url = BASE .. path
 	local ok, body = pcall(function() return game:HttpGet(url) end)
 	if not ok or not body or body == "" then
 		local req = (syn and syn.request) or (http and http.request) or request

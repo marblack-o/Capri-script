@@ -21,49 +21,78 @@ local function httpRequest(opts)
 	local req = (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or request or http_request
 	if req then
 		local ok, res = pcall(req, opts)
-		if ok and res then return res end
+		if ok and res then
+			return res
+		end
 	end
 	if opts.Method == "GET" or not opts.Method then
-		local ok, body = pcall(function() return game:HttpGet(opts.Url) end)
-		if ok and body then return { StatusCode = 200, Body = body } end
+		local ok, body = pcall(function()
+			return game:HttpGet(opts.Url)
+		end)
+		if ok and body then
+			local r = {}
+			r.StatusCode = 200
+			r.Body = body
+			return r
+		end
 	end
 	return nil
 end
 
 local function groqChat(apiKey, messages, maxTokens)
-	local body = HttpService:JSONEncode({
-		model = API_MODEL,
-		messages = messages,
-		temperature = 0.85,
-		max_tokens = maxTokens or 500,
+	local payload = {}
+	payload.model = API_MODEL
+	payload.messages = messages
+	payload.temperature = 0.85
+	payload.max_tokens = maxTokens or 500
+	local body = HttpService:JSONEncode(payload)
+
+	local headers = {}
+	headers["Content-Type"] = "application/json"
+	headers["Authorization"] = "Bearer " .. apiKey
+
+	local opts = {}
+	opts.Url = API_URL
+	opts.Method = "POST"
+	opts.Headers = headers
+	opts.Body = body
+
+	local res = httpRequest(opts)
+	if not res or not res.Body then
+		return nil, "http_fail"
+	end
+	local ok, data = pcall(function()
+		return HttpService:JSONDecode(res.Body)
 	end)
-	local res = httpRequest({
-		Url = API_URL,
-		Method = "POST",
-		Headers = {
-			["Content-Type"] = "application/json",
-			["Authorization"] = "Bearer " .. apiKey,
-		end,
-		Body = body,
-	end)
-	if not res or not res.Body then return nil, "http_fail" end
-	local ok, data = pcall(function() return HttpService:JSONDecode(res.Body) end)
-	if not ok or not data then return nil, "json_fail" end
-	if data.error then return nil, tostring(data.error.message or data.error) end
+	if not ok or not data then
+		return nil, "json_fail"
+	end
+	if data.error then
+		return nil, tostring(data.error.message or data.error)
+	end
 	local c = data.choices and data.choices[1]
 	local content = c and c.message and c.message.content
-	if content and content ~= "" then return content, nil end
+	if content and content ~= "" then
+		return content, nil
+	end
 	return nil, "empty"
 end
 
 function App.start(modules, apiKey)
-	local Config, Theme, Assets = modules.Config, modules.Theme, modules.Assets
-	local Visual, UI_Chat, UAIBridge, Hack = modules.Visual, modules.UI_Chat, modules.UAIBridge, modules.Hack
+	local Config = modules.Config
+	local Theme = modules.Theme
+	local Assets = modules.Assets
+	local Visual = modules.Visual
+	local UI_Chat = modules.UI_Chat
+	local UAIBridge = modules.UAIBridge
+	local Hack = modules.Hack
 	local Explorer = modules.Explorer
 
 	pcall(function()
 		local old = CoreGui:FindFirstChild("CapriUAI")
-		if old then old:Destroy() end
+		if old then
+			old:Destroy()
+		end
 	end)
 
 	local gui = Instance.new("ScreenGui")
@@ -76,64 +105,78 @@ function App.start(modules, apiKey)
 
 	Assets.preload()
 	local cfg = Config.ensureDefaults(Config.load())
-	if type(cfg.groq_key) ~= "string" or cfg.groq_key == "" then cfg.groq_key = apiKey end
+	if type(cfg.groq_key) ~= "string" or cfg.groq_key == "" then
+		cfg.groq_key = apiKey
+	end
 	Config.save(cfg)
 
 	local visual = Visual.new(gui, Assets, Theme)
 	local ui
 	local hack
 
-	ui = UI_Chat.new({
-		gui = gui,
-		Theme = Theme,
-		Assets = Assets,
-		Config = Config,
-		cfg = cfg,
-		UAI = UAIBridge,
-		Visual = visual,
-		apiKey = apiKey,
-		onSend = function(text)
-			text = (text or ""):gsub("^%s+", ""):gsub("%s+$", "")
-			if text == "" then return end
-			ui.inputBox.Text = ""
-			if ui.activeTab ~= "chats" then ui:setTab("chats") end
-			ui:addBubble("user", text)
-			task.spawn(function()
-				if hack.mode == "clarifying" then
-					hack:clarify(text)
+	local uiOpts = {}
+	uiOpts.gui = gui
+	uiOpts.Theme = Theme
+	uiOpts.Assets = Assets
+	uiOpts.Config = Config
+	uiOpts.cfg = cfg
+	uiOpts.UAI = UAIBridge
+	uiOpts.Visual = visual
+	uiOpts.apiKey = apiKey
+	uiOpts.onSend = function(text)
+		text = (text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+		if text == "" then
+			return
+		end
+		ui.inputBox.Text = ""
+		if ui.activeTab ~= "chats" then
+			ui:setTab("chats")
+		end
+		ui:addBubble("user", text)
+		task.spawn(function()
+			if hack.mode == "clarifying" then
+				hack:clarify(text)
+				return
+			end
+			if hack.mode == "idle" and text:sub(1, 1) == "!" and not hack.running then
+				local clean = text:sub(2):gsub("^%s+", ""):gsub("%s+$", "")
+				if clean == "" then
+					ui:addBubble("assistant", "Pon el trabajo tras '!'. Ej: !analiza el juego")
 					return
 				end
-				if hack.mode == "idle" and text:sub(1, 1) == "!" and not hack.running then
-					local clean = text:sub(2):gsub("^%s+", ""):gsub("%s+$", "")
-					if clean == "" then
-						ui:addBubble("assistant", "Pon el trabajo tras '!'. Ej: !analiza el juego")
-						return
-					end
-					hack:begin(clean)
-					return
+				hack:begin(clean)
+				return
+			end
+			ui:setStatus(hack.running and "hack + charla" or "pensando...")
+			visual:setExpression("talking")
+			local ch = ui:getActiveChat()
+			local msgs = {}
+			local sys = {}
+			sys.role = "system"
+			sys.content = CAPRI_PROMPT
+			table.insert(msgs, sys)
+			for _, m in ipairs(ch.messages or {}) do
+				if m.role == "user" or m.role == "assistant" then
+					local mm = {}
+					mm.role = m.role
+					mm.content = m.content
+					table.insert(msgs, mm)
 				end
-				ui:setStatus(hack.running and "hack + charla" or "pensando...")
-				visual:setExpression("talking")
-				local ch = ui:getActiveChat()
-				local msgs = { { role = "system", content = CAPRI_PROMPT } }
-				for _, m in ipairs(ch.messages or {}) do
-					if m.role == "user" or m.role == "assistant" then
-						table.insert(msgs, { role = m.role, content = m.content })
-					end
-				end
-				local reply, err = groqChat(ui.API_KEY or apiKey, msgs, 450)
-				if not reply then
-					ui:addBubble("assistant", "Fallo la IA (" .. tostring(err) .. ").")
-					visual:setExpression("error")
-					ui:setStatus("error")
-				else
-					ui:addBubble("assistant", reply)
-					visual:setExpression(hack.running and "hack" or "idle")
-					ui:setStatus(hack.running and "hackeando" or "chat")
-				end
-			end)
-		end,
-	end)
+			end
+			local reply, err = groqChat(ui.API_KEY or apiKey, msgs, 450)
+			if not reply then
+				ui:addBubble("assistant", "Fallo la IA (" .. tostring(err) .. ").")
+				visual:setExpression("error")
+				ui:setStatus("error")
+			else
+				ui:addBubble("assistant", reply)
+				visual:setExpression(hack.running and "hack" or "idle")
+				ui:setStatus(hack.running and "hackeando" or "chat")
+			end
+		end)
+	end
+
+	ui = UI_Chat.new(uiOpts)
 
 	if Explorer and type(Explorer.render) == "function" then
 		function ui:buildFiles()
@@ -141,17 +184,17 @@ function App.start(modules, apiKey)
 		end
 	end
 
-	hack = Hack.new({
-		gui = gui,
-		Theme = Theme,
-		UAI = UAIBridge,
-		cfg = cfg,
-		ui = ui,
-		visual = visual,
-		apiKey = apiKey,
-		groqChat = groqChat,
-		capriPrompt = CAPRI_PROMPT,
-	end)
+	local hackOpts = {}
+	hackOpts.gui = gui
+	hackOpts.Theme = Theme
+	hackOpts.UAI = UAIBridge
+	hackOpts.cfg = cfg
+	hackOpts.ui = ui
+	hackOpts.visual = visual
+	hackOpts.apiKey = apiKey
+	hackOpts.groqChat = groqChat
+	hackOpts.capriPrompt = CAPRI_PROMPT
+	hack = Hack.new(hackOpts)
 
 	visual.onClick = function()
 		ui:toggle()
@@ -167,7 +210,8 @@ function App.start(modules, apiKey)
 end
 
 function App.boot(modules)
-	local Config, Theme = modules.Config, modules.Theme
+	local Config = modules.Config
+	local Theme = modules.Theme
 	local cfg = Config.load()
 	local key = cfg.groq_key
 	if type(key) == "string" and key ~= "" then
@@ -178,8 +222,11 @@ function App.boot(modules)
 
 	pcall(function()
 		local old = CoreGui:FindFirstChild("CapriUAI")
-		if old then old:Destroy() end
+		if old then
+			old:Destroy()
+		end
 	end)
+
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "CapriUAI"
 	gui.ResetOnSpawn = false
@@ -202,7 +249,7 @@ function App.boot(modules)
 	t.Size = UDim2.new(1, -24, 0, 28)
 	t.Position = UDim2.fromOffset(12, 14)
 	t.BackgroundTransparency = 1
-	t.Text = "Capri — Groq key"
+	t.Text = "Capri - Groq key"
 	t.TextColor3 = Theme.accent
 	t.Font = Enum.Font.GothamBold
 	t.TextSize = 18
@@ -236,7 +283,9 @@ function App.boot(modules)
 	Theme.mkCorner(go, 8)
 	go.MouseButton1Click:Connect(function()
 		local k = (box.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
-		if k == "" then return end
+		if k == "" then
+			return
+		end
 		local c = Config.load()
 		c.groq_key = k
 		Config.save(c)

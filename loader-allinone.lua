@@ -1,19 +1,58 @@
---[[ Capri v6.1 loader ]]
-print("[Capri] Iniciando v6.1...")
+--[[
+  loader-allinone.lua
+  Qué: bootstrap del host Capri modular.
+  Por qué: un solo loadstring descarga módulos con nombre claro (no part1/part2).
+  Orden: Config → Theme → Assets → UAIBridge → Visual → UI_Chat → Hack → App
+]]
+
+print("[Capri] Loader modular v7...")
+
 local BASE = "https://raw.githubusercontent.com/marblack-o/Capri-script/main/"
+
 local function fetch(path)
-    local ok, body = pcall(function() return game:HttpGet(BASE .. path) end)
-    if not ok or not body or body == "" then
-        local req = (syn and syn.request) or (http and http.request) or request
-        if req then
-            local ok2, res = pcall(req, {Url = BASE .. path, Method = "GET"})
-            if ok2 and res and (res.Body or res.body) then body = res.Body or res.body end
-        end
-    end
-    if not body or body == "" then error("[Capri] No se pudo descargar " .. path) end
-    return body
+	local ok, body = pcall(function() return game:HttpGet(BASE .. path) end)
+	if not ok or not body or body == "" then
+		local req = (syn and syn.request) or (http and http.request) or request
+		if req then
+			local ok2, res = pcall(req, { Url = BASE .. path, Method = "GET" })
+			if ok2 and res and (res.Body or res.body) then
+				body = res.Body or res.body
+			end
+		end
+	end
+	if not body or body == "" then
+		error("[Capri] No se pudo descargar " .. path)
+	end
+	return body
 end
-local src = fetch("src/capri_part1.lua") .. fetch("src/capri_part2.lua") .. fetch("src/capri_part3.lua")
-local fn, err = loadstring(src)
-if not fn then error("[Capri] compile: " .. tostring(err)) end
-fn()
+
+local function loadMod(path)
+	local src = fetch(path)
+	local fn, err = loadstring(src, path)
+	if not fn then error("[Capri] compile " .. path .. ": " .. tostring(err)) end
+	local ok, mod = pcall(fn)
+	if not ok then error("[Capri] run " .. path .. ": " .. tostring(mod)) end
+	return mod
+end
+
+local modules = {
+	Config = loadMod("src/Config.lua"),
+	Theme = loadMod("src/Theme.lua"),
+	Assets = loadMod("src/Assets.lua"),
+	UAIBridge = loadMod("src/UAIBridge.lua"),
+	Visual = loadMod("src/Visual.lua"),
+	UI_Chat = loadMod("src/UI_Chat.lua"),
+	Hack = loadMod("src/Hack.lua"),
+	App = loadMod("src/App.lua"),
+}
+
+assert(type(modules.Config.load) == "function", "Config.load missing")
+assert(type(modules.UAIBridge.ensure) == "function", "UAIBridge.ensure missing")
+assert(type(modules.UAIBridge.injectProvider) == "function", "injectProvider missing")
+assert(type(modules.UAIBridge.runMission) == "function", "runMission missing")
+assert(type(modules.Visual.new) == "function", "Visual.new missing")
+assert(type(modules.UI_Chat.new) == "function", "UI_Chat.new missing")
+assert(type(modules.Hack.new) == "function", "Hack.new missing")
+assert(type(modules.App.boot) == "function", "App.boot missing")
+
+modules.App.boot(modules)

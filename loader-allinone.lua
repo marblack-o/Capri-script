@@ -1,13 +1,11 @@
 --[[
   loader-allinone.lua
-  Que: bootstrap del host Capri modular.
-  Orden: Config -> Theme -> Assets -> UAIBridge -> Visual -> UI_Chat -> Hack -> App
+  Que: bootstrap Capri modular v7.0.4
 ]]
 
-print("[Capri] Loader modular v7.0.3...")
+print("[Capri] Loader modular v7.0.4...")
 
--- Commit con Config + Assets corregidos (evita cache rota de raw/main)
-local BASE = "https://raw.githubusercontent.com/marblack-o/Capri-script/4eb19bce569531311295a399540f7ee43558d4e4/"
+local BASE = "https://raw.githubusercontent.com/marblack-o/Capri-script/e86583bb651ae706280cc37eb5ba3a590969e526/"
 
 local function fetch(path)
 	local url = BASE .. path
@@ -43,16 +41,16 @@ local modules = {
 	UAIBridge = loadMod("src/UAIBridge.lua"),
 	Visual = loadMod("src/Visual.lua"),
 	UI_Chat = loadMod("src/UI_Chat.lua"),
+	Explorer = loadMod("src/Explorer.lua"),
 	Hack = loadMod("src/Hack.lua"),
 	App = loadMod("src/App.lua"),
 }
 
 assert(type(modules.Config.load) == "function", "Config.load missing")
 assert(type(modules.UAIBridge.ensure) == "function", "UAIBridge.ensure missing")
-assert(type(modules.UAIBridge.injectProvider) == "function", "injectProvider missing")
-assert(type(modules.UAIBridge.runMission) == "function", "runMission missing")
 assert(type(modules.Visual.new) == "function", "Visual.new missing")
 assert(type(modules.UI_Chat.new) == "function", "UI_Chat.new missing")
+assert(type(modules.Explorer.render) == "function", "Explorer.render missing")
 assert(type(modules.Hack.new) == "function", "Hack.new missing")
 assert(type(modules.App.boot) == "function", "App.boot missing")
 

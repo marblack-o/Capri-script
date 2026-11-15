@@ -1,7 +1,7 @@
 --[[
   Config.lua
-  Qué: lectura/escritura de capri_config.json en el filesystem del executor.
-  Por qué: keys, chats e historial deben vivir fuera del repo (nunca en GitHub).
+  Que: lectura/escritura de capri_config.json en el filesystem del executor.
+  Por que: keys, chats e historial deben vivir fuera del repo (nunca en GitHub).
 ]]
 
 local HttpService = game:GetService("HttpService")
@@ -40,8 +40,12 @@ function Config.ensureDefaults(cfg)
 	cfg.chats = type(cfg.chats) == "table" and cfg.chats or {}
 	if #cfg.chats == 0 then
 		cfg.chats = {
-			{ id = HttpService:GenerateGUID(false), title = "General", messages = {} },
-		end
+			{
+				id = HttpService:GenerateGUID(false),
+				title = "General",
+				messages = {},
+			},
+		}
 	end
 	cfg.active_chat = cfg.active_chat or cfg.chats[1].id
 	return cfg

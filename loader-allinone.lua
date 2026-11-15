@@ -1,14 +1,13 @@
 --[[
   loader-allinone.lua
   Que: bootstrap del host Capri modular.
-  Por que: un solo loadstring descarga modulos con nombre claro.
   Orden: Config -> Theme -> Assets -> UAIBridge -> Visual -> UI_Chat -> Hack -> App
 ]]
 
-print("[Capri] Loader modular v7.0.2...")
+print("[Capri] Loader modular v7.0.3...")
 
--- Pin al commit con Config.lua corregido (evita cache roto de raw/main)
-local BASE = "https://raw.githubusercontent.com/marblack-o/Capri-script/cb526c20ec865b040dca844407d3b081ee1d1183/"
+-- Commit con Config + Assets corregidos (evita cache rota de raw/main)
+local BASE = "https://raw.githubusercontent.com/marblack-o/Capri-script/4eb19bce569531311295a399540f7ee43558d4e4/"
 
 local function fetch(path)
 	local url = BASE .. path

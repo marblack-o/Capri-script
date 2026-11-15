@@ -1,8 +1,8 @@
 --[[
   Visual.lua
-  Qué: sprite Capri (cuerpo completo + cara), bob, expresiones y cut-in.
-  Por qué: acercarse a capri-desktop con assets del repo: capri-full/cutout + face-* / cutin-*
-  Estados: idle | talking | hack | done | error
+  Que: sprite Capri (cuerpo completo + cara), bob, expresiones y cut-in.
+  Por que: presencia tipo capri-desktop con assets del repo.
+  Nota: las caras del pack vienen invertidas respecto al body; Rotation=180 las corrige.
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -25,16 +25,18 @@ end
 
 function Visual:_build()
 	local Theme, Assets = self.Theme, self.Assets
+
 	local root = Instance.new("ImageButton")
 	root.Name = "CapriSprite"
-	root.Size = UDim2.fromOffset(120, 140)
-	root.Position = UDim2.new(1, -130, 0.38, 0)
+	root.Size = UDim2.fromOffset(130, 160)
+	root.Position = UDim2.new(1, -140, 0.36, 0)
 	root.BackgroundTransparency = 1
 	root.AutoButtonColor = false
 	root.ZIndex = 10
 	root.Parent = self.gui
 	self.root = root
 
+	-- Cuerpo completo (silueta)
 	local body = Instance.new("ImageLabel")
 	body.Name = "Body"
 	body.Size = UDim2.fromScale(1, 1)
@@ -45,13 +47,16 @@ function Visual:_build()
 	body.Parent = root
 	self.body = body
 
+	-- Cara sobre la cabeza (proporcion y orientacion corregidas)
 	local face = Instance.new("ImageLabel")
 	face.Name = "Face"
-	face.Size = UDim2.new(0.52, 0, 0.4, 0)
-	face.Position = UDim2.new(0.24, 0, 0.02, 0)
+	face.AnchorPoint = Vector2.new(0.5, 0)
+	face.Size = UDim2.new(0.42, 0, 0.28, 0)
+	face.Position = UDim2.new(0.5, 0, 0.04, 0)
 	face.BackgroundTransparency = 1
 	face.Image = Assets.pick("FaceCalm", "FaceLook", "Face")
 	face.ScaleType = Enum.ScaleType.Fit
+	face.Rotation = 180
 	face.ZIndex = 11
 	face.Parent = root
 	self.face = face
@@ -68,10 +73,11 @@ function Visual:_build()
 	self.fallback = fb
 
 	local cutin = Instance.new("ImageLabel")
-	cutin.Size = UDim2.fromOffset(100, 100)
-	cutin.Position = UDim2.new(0.5, -50, 0.2, 0)
+	cutin.Size = UDim2.fromOffset(110, 110)
+	cutin.Position = UDim2.new(0.5, -55, 0.18, 0)
 	cutin.BackgroundTransparency = 1
 	cutin.Visible = false
+	cutin.Rotation = 180
 	cutin.ZIndex = 50
 	cutin.Parent = self.gui
 	self.cutin = cutin
@@ -94,14 +100,18 @@ function Visual:_build()
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = false
 			baseY = root.Position.Y.Offset
-			if not moved and self.onClick then self.onClick() end
+			if not moved and self.onClick then
+				self.onClick()
+			end
 		end
 	end)
 	UserInputService.InputChanged:Connect(function(input)
 		if not dragging then return end
 		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
 			local d = input.Position - start
-			if math.abs(d.X) > 4 or math.abs(d.Y) > 4 then moved = true end
+			if math.abs(d.X) > 4 or math.abs(d.Y) > 4 then
+				moved = true
+			end
 			root.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
 			baseY = root.Position.Y.Offset
 		end
@@ -112,6 +122,7 @@ function Visual:setFace(keys)
 	local img = self.Assets.pick(table.unpack(keys))
 	if img ~= "" then
 		self.face.Image = img
+		self.face.Rotation = 180
 		self.fallback.Text = ""
 	end
 	if self.body.Image == "" then
@@ -124,6 +135,7 @@ function Visual:flashCutin(key)
 	if img == "" then return end
 	local c = self.cutin
 	c.Image = img
+	c.Rotation = 180
 	c.ImageTransparency = 0.1
 	c.Visible = true
 	c.Size = UDim2.fromOffset(70, 70)

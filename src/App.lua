@@ -1,7 +1,6 @@
 --[[
   App.lua
-  Qué: orquesta módulos Config, Assets, Theme, Visual, UI_Chat, UAIBridge, Hack.
-  Por qué: un solo punto de arranque limpio; el loader solo descarga e invoca App.start.
+  Que: orquesta modulos Config, Assets, Theme, Visual, UI_Chat, UAIBridge, Hack, Explorer.
 ]]
 
 local HttpService = game:GetService("HttpService")
@@ -37,16 +36,16 @@ local function groqChat(apiKey, messages, maxTokens)
 		messages = messages,
 		temperature = 0.85,
 		max_tokens = maxTokens or 500,
-	})
+	end)
 	local res = httpRequest({
 		Url = API_URL,
 		Method = "POST",
 		Headers = {
 			["Content-Type"] = "application/json",
 			["Authorization"] = "Bearer " .. apiKey,
-		},
+		end,
 		Body = body,
-	})
+	end)
 	if not res or not res.Body then return nil, "http_fail" end
 	local ok, data = pcall(function() return HttpService:JSONDecode(res.Body) end)
 	if not ok or not data then return nil, "json_fail" end
@@ -60,6 +59,7 @@ end
 function App.start(modules, apiKey)
 	local Config, Theme, Assets = modules.Config, modules.Theme, modules.Assets
 	local Visual, UI_Chat, UAIBridge, Hack = modules.Visual, modules.UI_Chat, modules.UAIBridge, modules.Hack
+	local Explorer = modules.Explorer
 
 	pcall(function()
 		local old = CoreGui:FindFirstChild("CapriUAI")
@@ -112,7 +112,7 @@ function App.start(modules, apiKey)
 					hack:begin(clean)
 					return
 				end
-				ui:setStatus(hack.running and "hack + charla" or "pensando…")
+				ui:setStatus(hack.running and "hack + charla" or "pensando...")
 				visual:setExpression("talking")
 				local ch = ui:getActiveChat()
 				local msgs = { { role = "system", content = CAPRI_PROMPT } }
@@ -123,7 +123,7 @@ function App.start(modules, apiKey)
 				end
 				local reply, err = groqChat(ui.API_KEY or apiKey, msgs, 450)
 				if not reply then
-					ui:addBubble("assistant", "Falló la IA (" .. tostring(err) .. ").")
+					ui:addBubble("assistant", "Fallo la IA (" .. tostring(err) .. ").")
 					visual:setExpression("error")
 					ui:setStatus("error")
 				else
@@ -133,7 +133,13 @@ function App.start(modules, apiKey)
 				end
 			end)
 		end,
-	})
+	end)
+
+	if Explorer and type(Explorer.render) == "function" then
+		function ui:buildFiles()
+			Explorer.render(self.filesPane, self.Theme, self.UAI)
+		end
+	end
 
 	hack = Hack.new({
 		gui = gui,
@@ -145,7 +151,7 @@ function App.start(modules, apiKey)
 		apiKey = apiKey,
 		groqChat = groqChat,
 		capriPrompt = CAPRI_PROMPT,
-	})
+	end)
 
 	visual.onClick = function()
 		ui:toggle()
@@ -157,7 +163,7 @@ function App.start(modules, apiKey)
 		print(ok and "[Capri] UAI preload OK" or "[Capri] UAI bajo demanda")
 	end)
 
-	print("[Capri] App modular lista (Visual · UI_Chat · UAIBridge · Hack)")
+	print("[Capri] App modular lista (Visual · UI_Chat · Explorer · UAIBridge · Hack)")
 end
 
 function App.boot(modules)
@@ -170,7 +176,6 @@ function App.boot(modules)
 		return
 	end
 
-	local CoreGui = game:GetService("CoreGui")
 	pcall(function()
 		local old = CoreGui:FindFirstChild("CapriUAI")
 		if old then old:Destroy() end

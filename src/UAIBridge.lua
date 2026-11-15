@@ -1,12 +1,7 @@
 --[[
   UAIBridge.lua
-  Qué: puente con Project UAI (carga, providers, sesiones, misiones, navegación nativa).
-  Por qué: Capri no reimplementa el agente; reutiliza sdk.request / providers / show().
-  APIs clave:
-    - ensure() → loadstring dist/uai.lua {ui,reuse}
-    - injectProvider(prov, key) → providers.blank/save/setActive
-    - runMission(prompt, cb) → sessions.open + sdk.request + await
-    - show(section) → uai.show("chat"|"providers"|"logs")
+  Que: puente con Project UAI (carga, providers, sesiones, misiones).
+  Por que: Capri reutiliza sdk.request / providers / show().
 ]]
 
 local UAI_URL = "https://raw.githubusercontent.com/Project-Ptolemy/ProjectUAI/main/dist/uai.lua"
@@ -60,19 +55,19 @@ function UAIBridge.show(section)
 	return false, "show() no disponible"
 end
 
--- Catálogo alineado con presets UAI (openai-compatible + links oficiales)
+-- Modelos orientados a tool-calling para !hack (no solo chat)
 UAIBridge.PROVIDER_CATALOG = {
-	{ id = "groq", preset = "groq", name = "Groq", desc = "Chat Capri + fallback UAI", keyField = "groq_key",
+	{ id = "groq", preset = "groq", name = "Groq", desc = "Chat Capri (tools UAI limitados)", keyField = "groq_key",
 		link = "https://console.groq.com/keys", baseUrl = "https://api.groq.com/openai/v1", model = "openai/gpt-oss-20b", forCapri = true },
-	{ id = "openrouter", preset = "openrouter", name = "OpenRouter", desc = "Fallback multi-modelo", keyField = "openrouter_key",
-		link = "https://openrouter.ai/keys", baseUrl = "https://openrouter.ai/api/v1", model = "openrouter/auto" },
-	{ id = "openai", preset = "openai", name = "OpenAI", desc = "Fallback UAI", keyField = "openai_key",
+	{ id = "openrouter", preset = "openrouter", name = "OpenRouter", desc = "Fallback con tools (gpt-4o-mini)", keyField = "openrouter_key",
+		link = "https://openrouter.ai/keys", baseUrl = "https://openrouter.ai/api/v1", model = "openai/gpt-4o-mini" },
+	{ id = "openai", preset = "openai", name = "OpenAI", desc = "Fallback UAI tools", keyField = "openai_key",
 		link = "https://platform.openai.com/api-keys", baseUrl = "https://api.openai.com/v1", model = "gpt-4o-mini" },
 	{ id = "deepseek", preset = "deepseek", name = "DeepSeek", desc = "Fallback UAI", keyField = "deepseek_key",
 		link = "https://platform.deepseek.com/api_keys", baseUrl = "https://api.deepseek.com/v1", model = "deepseek-chat" },
 	{ id = "hcnsec", preset = "hcnsec", name = "HCNSEC", desc = "Key personal (red Free)", keyField = "hcnsec_key",
 		link = "https://www.hcnsec.cn/", baseUrl = "https://api.hcnsec.cn/v1", model = "auto" },
-	{ id = "uai_free", name = "Project UAI Free", desc = "Sin key · 20:00–12:00 UTC+8", keyField = nil,
+	{ id = "uai_free", name = "Project UAI Free", desc = "Sin key · 20:00-12:00 UTC+8", keyField = nil,
 		link = "https://discord.gg/9xYyyYuKap", noKey = true },
 }
 
@@ -114,7 +109,7 @@ function UAIBridge.injectProvider(prov, apiKey)
 		if type(saved) == "table" and saved.id and uai.providers.setActive then
 			pcall(function() uai.providers.setActive(saved.id) end)
 		end
-		return true, "Activo en UAI: " .. prov.name
+		return true, "Activo en UAI: " .. prov.name .. " / " .. tostring(prov.model or "?")
 	elseif type(a) == "table" and a.id then
 		if uai.providers.setActive then pcall(function() uai.providers.setActive(a.id) end) end
 		return true, "Activo en UAI: " .. prov.name
@@ -146,12 +141,15 @@ end
 function UAIBridge.friendlyError(err, cfg)
 	local e = tostring(err or "")
 	local low = e:lower()
+	if low:find("tool choice") or low:find("tool_choice") or low:find("called a tool") then
+		return e .. "\n\nEste modelo/provider no maneja bien las tools de UAI. Usa OpenRouter (openai/gpt-4o-mini) u OpenAI gpt-4o-mini, o Project UAI Free en horario. Evita modelos sin tool-calling para !hack."
+	end
 	if low:find("20:00") or low:find("utc+8") or low:find("outside its daily") then
 		local ok, msg, name = UAIBridge.activateFallback(cfg or {})
 		if ok then
 			return e .. "\n\nFallback " .. tostring(name) .. " activado en UAI. Reintenta el !hack.\n(" .. tostring(msg) .. ")"
 		end
-		return e .. "\n\nFree offline (20:00–12:00 UTC+8). Guarda otra key en Providers y reintenta."
+		return e .. "\n\nFree offline (20:00-12:00 UTC+8). Guarda otra key en Providers y reintenta."
 	end
 	if low:find("provider") then
 		return e .. "\n\nConfigura Providers (se inyectan en UAI al guardar)."
@@ -177,15 +175,14 @@ function UAIBridge.runMission(prompt, onComplete, cfg)
 				return uai.sessions.open("capri-hack-" .. tostring(math.floor(os.clock() * 1000)), {
 					title = "Capri Hack",
 					ephemeral = true,
-					toolFilter = {},
-				})
+				end)
 			end)
 			if okS then session, sessionErr = a, b else sessionErr = a end
 		else
 			sessionErr = "sessions.open missing"
 		end
 		if not session then
-			onComplete(false, UAIBridge.friendlyError("No sesión: " .. tostring(sessionErr), cfg))
+			onComplete(false, UAIBridge.friendlyError("No sesion: " .. tostring(sessionErr), cfg))
 			return
 		end
 
@@ -200,7 +197,7 @@ function UAIBridge.runMission(prompt, onComplete, cfg)
 		local okReq, a, b = pcall(function()
 			return uai.sdk.request(session, prompt, {
 				onComplete = function(result) finalResult = result end,
-			})
+			end)
 		end)
 		if not okReq then finish(false, "sdk.request: " .. tostring(a)) return end
 		req = a

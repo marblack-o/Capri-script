@@ -1,11 +1,11 @@
 --[[
   loader-allinone.lua
-  Que: bootstrap Capri modular v7.0.6
+  Que: bootstrap Capri modular v7.1.0 (Jarvis HUD)
 ]]
 
-print("[Capri] Loader modular v7.0.6...")
+print("[Capri] Loader modular v7.1.0 (Jarvis)...")
 
-local BASE = "https://raw.githubusercontent.com/marblack-o/Capri-script/048b6ba1dccf1a81a0be178e212ea2138591c8a2/"
+local BASE = "https://raw.githubusercontent.com/marblack-o/Capri-script/10718fc063a71de5b73eceb0eefc5e2a2bbd63b0/"
 
 local function fetch(path)
 	local url = BASE .. path

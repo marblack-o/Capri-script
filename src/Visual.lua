@@ -1,8 +1,8 @@
 --[[
-  Visual.lua
-  Que: sprite Capri (cuerpo completo + cara), bob, expresiones y cut-in.
-  Por que: presencia tipo capri-desktop con assets del repo.
-  Nota: las caras del pack vienen invertidas respecto al body; Rotation=180 las corrige.
+  Visual.lua (Jarvis mode)
+  Que: presencia minimal tipo Jarvis - orbe de estado + label.
+  Por que: abandonamos sprite/caras/assets; mas estable y comodo.
+  API compatible: setExpression, onClick, flashCutin (no-op).
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -10,6 +10,20 @@ local RunService = game:GetService("RunService")
 
 local Visual = {}
 Visual.__index = Visual
+
+local STATE_COLOR = {}
+STATE_COLOR.idle = Color3.fromRGB(80, 200, 255)
+STATE_COLOR.talking = Color3.fromRGB(120, 230, 255)
+STATE_COLOR.hack = Color3.fromRGB(255, 200, 60)
+STATE_COLOR.done = Color3.fromRGB(80, 255, 160)
+STATE_COLOR.error = Color3.fromRGB(255, 80, 100)
+
+local STATE_LABEL = {}
+STATE_LABEL.idle = "CAPRI"
+STATE_LABEL.talking = "LISTEN"
+STATE_LABEL.hack = "SYSTEM"
+STATE_LABEL.done = "DONE"
+STATE_LABEL.error = "ERROR"
 
 function Visual.new(gui, Assets, Theme)
 	local self = setmetatable({}, Visual)
@@ -24,173 +38,136 @@ function Visual.new(gui, Assets, Theme)
 end
 
 function Visual:_build()
-	local Theme, Assets = self.Theme, self.Assets
+	local Theme = self.Theme
 
-	local root = Instance.new("ImageButton")
-	root.Name = "CapriSprite"
-	root.Size = UDim2.fromOffset(130, 160)
-	root.Position = UDim2.new(1, -140, 0.36, 0)
-	root.BackgroundTransparency = 1
+	local root = Instance.new("TextButton")
+	root.Name = "CapriJarvis"
+	root.Size = UDim2.fromOffset(72, 72)
+	root.Position = UDim2.new(1, -90, 0.42, 0)
+	root.BackgroundColor3 = Color3.fromRGB(8, 16, 28)
+	root.BackgroundTransparency = 0.15
+	root.BorderSizePixel = 0
+	root.Text = ""
 	root.AutoButtonColor = false
 	root.ZIndex = 10
 	root.Parent = self.gui
 	self.root = root
 
-	-- Cuerpo completo (silueta)
-	local body = Instance.new("ImageLabel")
-	body.Name = "Body"
-	body.Size = UDim2.fromScale(1, 1)
-	body.BackgroundTransparency = 1
-	body.Image = Assets.pick("Full", "Cutout", "Face")
-	body.ScaleType = Enum.ScaleType.Fit
-	body.ZIndex = 10
-	body.Parent = root
-	self.body = body
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = root
 
-	-- Cara sobre la cabeza (proporcion y orientacion corregidas)
-	local face = Instance.new("ImageLabel")
-	face.Name = "Face"
-	face.AnchorPoint = Vector2.new(0.5, 0)
-	face.Size = UDim2.new(0.42, 0, 0.28, 0)
-	face.Position = UDim2.new(0.5, 0, 0.04, 0)
-	face.BackgroundTransparency = 1
-	face.Image = Assets.pick("FaceCalm", "FaceLook", "Face")
-	face.ScaleType = Enum.ScaleType.Fit
-	face.Rotation = 180
-	face.ZIndex = 11
-	face.Parent = root
-	self.face = face
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = STATE_COLOR.idle
+	stroke.Thickness = 2
+	stroke.Transparency = 0.15
+	stroke.Parent = root
+	self.stroke = stroke
 
-	local fb = Instance.new("TextLabel")
-	fb.Size = UDim2.fromScale(1, 1)
-	fb.BackgroundTransparency = 1
-	fb.Text = (body.Image == "" and face.Image == "") and "C" or ""
-	fb.TextColor3 = Theme.accent
-	fb.Font = Enum.Font.GothamBlack
-	fb.TextSize = 34
-	fb.ZIndex = 12
-	fb.Parent = root
-	self.fallback = fb
+	local core = Instance.new("Frame")
+	core.Name = "Core"
+	core.AnchorPoint = Vector2.new(0.5, 0.5)
+	core.Position = UDim2.fromScale(0.5, 0.5)
+	core.Size = UDim2.fromOffset(28, 28)
+	core.BackgroundColor3 = STATE_COLOR.idle
+	core.BackgroundTransparency = 0.25
+	core.BorderSizePixel = 0
+	core.ZIndex = 11
+	core.Parent = root
+	self.core = core
 
-	local cutin = Instance.new("ImageLabel")
-	cutin.Size = UDim2.fromOffset(110, 110)
-	cutin.Position = UDim2.new(0.5, -55, 0.18, 0)
-	cutin.BackgroundTransparency = 1
-	cutin.Visible = false
-	cutin.Rotation = 180
-	cutin.ZIndex = 50
-	cutin.Parent = self.gui
-	self.cutin = cutin
+	local coreCorner = Instance.new("UICorner")
+	coreCorner.CornerRadius = UDim.new(1, 0)
+	coreCorner.Parent = core
 
-	local dragging, moved, start, startPos = false, false, nil, nil
-	local baseY = root.Position.Y.Offset
+	local mark = Instance.new("TextLabel")
+	mark.Size = UDim2.fromScale(1, 1)
+	mark.BackgroundTransparency = 1
+	mark.Text = "C"
+	mark.TextColor3 = Color3.fromRGB(220, 245, 255)
+	mark.Font = Enum.Font.GothamBold
+	mark.TextSize = 14
+	mark.ZIndex = 12
+	mark.Parent = core
+
+	local tag = Instance.new("TextLabel")
+	tag.Name = "Tag"
+	tag.Size = UDim2.fromOffset(90, 16)
+	tag.Position = UDim2.new(0.5, -45, 1, 4)
+	tag.BackgroundTransparency = 1
+	tag.Text = "CAPRI"
+	tag.TextColor3 = STATE_COLOR.idle
+	tag.Font = Enum.Font.Code
+	tag.TextSize = 11
+	tag.ZIndex = 12
+	tag.Parent = root
+	self.tag = tag
+
+	-- Pulso suave del anillo
 	RunService.RenderStepped:Connect(function()
-		if dragging then return end
-		local wave = math.sin(os.clock() * 1.35) * 3.2
-		local pos = root.Position
-		root.Position = UDim2.new(pos.X.Scale, pos.X.Offset, pos.Y.Scale, baseY + wave)
+		local t = os.clock()
+		local pulse = 0.12 + math.abs(math.sin(t * 2.2)) * 0.2
+		if self.state == "hack" then
+			pulse = 0.05 + math.abs(math.sin(t * 5)) * 0.25
+		elseif self.state == "talking" then
+			pulse = 0.08 + math.abs(math.sin(t * 3.5)) * 0.22
+		end
+		self.stroke.Transparency = pulse
 	end)
+
+	local dragging = false
+	local moved = false
+	local start = nil
+	local startPos = nil
+
 	root.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging, moved, start, startPos = true, false, input.Position, root.Position
-			baseY = startPos.Y.Offset
+			dragging = true
+			moved = false
+			start = input.Position
+			startPos = root.Position
 		end
 	end)
+
 	root.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = false
-			baseY = root.Position.Y.Offset
 			if not moved and self.onClick then
 				self.onClick()
 			end
 		end
 	end)
+
 	UserInputService.InputChanged:Connect(function(input)
-		if not dragging then return end
+		if not dragging then
+			return
+		end
 		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
 			local d = input.Position - start
 			if math.abs(d.X) > 4 or math.abs(d.Y) > 4 then
 				moved = true
 			end
 			root.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
-			baseY = root.Position.Y.Offset
 		end
 	end)
 end
 
-function Visual:setFace(keys)
-	local img = self.Assets.pick(table.unpack(keys))
-	if img ~= "" then
-		self.face.Image = img
-		self.face.Rotation = 180
-		self.fallback.Text = ""
-	end
-	if self.body.Image == "" then
-		self.body.Image = self.Assets.pick("Full", "Cutout", "Face")
-	end
+function Visual:setFace(_keys)
+	-- compat: ya no hay caras
 end
 
-function Visual:flashCutin(key)
-	local img = self.Assets.pick(key)
-	if img == "" then return end
-	local c = self.cutin
-	c.Image = img
-	c.Rotation = 180
-	c.ImageTransparency = 0.1
-	c.Visible = true
-	c.Size = UDim2.fromOffset(70, 70)
-	self.Theme.tween(c, { Size = UDim2.fromOffset(120, 120) }, 0.16, Enum.EasingStyle.Back)
-	task.delay(0.9, function()
-		local t = self.Theme.tween(c, { ImageTransparency = 1 }, 0.2)
-		t.Completed:Wait()
-		c.Visible = false
-		c.ImageTransparency = 0
-	end)
+function Visual:flashCutin(_key)
+	-- compat: sin cut-ins
 end
 
 function Visual:setExpression(state)
-	self.state = state
-	self.token = self.token + 1
-	local token = self.token
-	if state == "talking" then
-		self:setFace({ "FaceLook", "FaceSmug", "FaceLaugh" })
-	elseif state == "hack" then
-		self:setFace({ "FaceMany", "FaceCalm" })
-		task.spawn(function()
-			local faces = { "FaceMany", "FaceCalm", "FaceLook" }
-			local i = 1
-			while self.token == token and self.state == "hack" do
-				task.wait(0.85)
-				if self.token ~= token then break end
-				i = (i % #faces) + 1
-				self:setFace({ faces[i] })
-			end
-		end)
-	elseif state == "done" then
-		self:setFace({ "FaceLaugh", "FaceSmug" })
-		self:flashCutin("Grin")
-		task.delay(1.4, function()
-			if self.token == token then self:setExpression("idle") end
-		end)
-	elseif state == "error" then
-		self:setFace({ "FaceWide", "FaceMany" })
-		self:flashCutin("Eyes")
-		task.delay(1.6, function()
-			if self.token == token then self:setExpression("idle") end
-		end)
-	else
-		self:setFace({ "FaceCalm", "FaceLook" })
-		task.spawn(function()
-			local faces = { "FaceCalm", "FaceLook", "FaceAside", "FaceSmug" }
-			local i = 1
-			while self.token == token and self.state == "idle" do
-				task.wait(2.8 + math.random())
-				if self.token ~= token then break end
-				i = (i % #faces) + 1
-				self:setFace({ faces[i] })
-			end
-		end)
-	end
+	self.state = state or "idle"
+	local color = STATE_COLOR[self.state] or STATE_COLOR.idle
+	local label = STATE_LABEL[self.state] or "CAPRI"
+	self.stroke.Color = color
+	self.core.BackgroundColor3 = color
+	self.tag.Text = label
+	self.tag.TextColor3 = color
 end
 
 return Visual

@@ -271,7 +271,6 @@ function App.start(modules, apiKey)
 
 	ui = UI_Chat.new(uiOpts)
 
-	-- Titulos oficiales JARVIS (por si el modulo aun dice Capri)
 	pcall(function()
 		if ui.window then
 			ui.window.Name = "JarvisWorkbench"
@@ -316,8 +315,11 @@ function App.start(modules, apiKey)
 	hack = Hack.new(hackOpts)
 
 	visual.onClick = function()
-		print("[JARVIS] toggle chat")
 		ui:toggle()
+		local open = ui.window and ui.window.Visible
+		if visual.setChatOpen then
+			visual:setChatOpen(open)
+		end
 	end
 	visual:setExpression("idle")
 
@@ -326,7 +328,7 @@ function App.start(modules, apiKey)
 		print(ok and "[JARVIS] UAI preload OK" or "[JARVIS] UAI bajo demanda")
 	end)
 
-	print("[JARVIS] Sistemas en linea.")
+	print("[JARVIS] Sistemas en linea (HUD Claude v8.1).")
 end
 
 function App.boot(modules)

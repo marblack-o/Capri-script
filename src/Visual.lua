@@ -11,7 +11,6 @@ local RunService = game:GetService("RunService")
 local Visual = {}
 Visual.__index = Visual
 
--- Colores del HTML: --c #35c8ff, trabajo amarillo, error rojo
 local C_IDLE = Color3.fromRGB(53, 200, 255)
 local C_TALK = Color3.fromRGB(143, 230, 255)
 local C_HACK = Color3.fromRGB(255, 200, 60)
@@ -45,7 +44,6 @@ function Visual.new(gui, Assets, Theme)
 end
 
 function Visual:_build()
-	-- Contenedor del HUD (orbe + texto)
 	local root = Instance.new("TextButton")
 	root.Name = "CapriJarvis"
 	root.Size = UDim2.fromOffset(110, 130)
@@ -57,7 +55,6 @@ function Visual:_build()
 	root.Parent = self.gui
 	self.root = root
 
-	-- Anillo exterior
 	local ringOuter = Instance.new("Frame")
 	ringOuter.Name = "RingOuter"
 	ringOuter.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -76,8 +73,7 @@ function Visual:_build()
 	roStroke.Parent = ringOuter
 	self.ringOuterStroke = roStroke
 
-	-- Anillo medio
-	local ringMid = Instance.new("Frame")
+	local ringMiddle = Instance.new("Frame")
 	ringMiddle.Name = "RingMiddle"
 	ringMiddle.AnchorPoint = Vector2.new(0.5, 0.5)
 	ringMiddle.Position = UDim2.new(0.5, 0, 0.42, 0)
@@ -95,7 +91,6 @@ function Visual:_build()
 	rmStroke.Parent = ringMiddle
 	self.ringMiddleStroke = rmStroke
 
-	-- Nucleo clickable (nodo)
 	local core = Instance.new("Frame")
 	core.Name = "Core"
 	core.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -127,7 +122,6 @@ function Visual:_build()
 	mark.ZIndex = 13
 	mark.Parent = core
 
-	-- Titulo + status (como #hud del HTML)
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
 	title.Size = UDim2.fromOffset(120, 16)
@@ -154,7 +148,6 @@ function Visual:_build()
 	tag.Parent = root
 	self.tag = tag
 
-	-- Pulso segun estado
 	RunService.RenderStepped:Connect(function()
 		local t = os.clock()
 		local pulse = 0.2 + math.abs(math.sin(t * 2.0)) * 0.25

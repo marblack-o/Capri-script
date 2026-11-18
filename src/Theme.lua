@@ -1,32 +1,44 @@
 --[[
   Theme.lua
-  Qué: tokens de color y estilo del workbench Capri.
-  Por qué: un solo sitio para el look púrpura/glitch y bordes verde (chat) / amarillo (UAI).
+  Que: tokens de color estilo J.A.R.V.I.S. (referencia HUD HTML).
+  Por que: cyan/vidrio oscuro; amarillo trabajo; rojo error.
 ]]
 
-local Theme = {
-	bg = Color3.fromRGB(12, 8, 18),
-	panel = Color3.fromRGB(26, 14, 40),
-	plate = Color3.fromRGB(32, 18, 50),
-	sidebar = Color3.fromRGB(18, 10, 30),
-	border = Color3.fromRGB(255, 70, 180),
-	accent = Color3.fromRGB(255, 55, 160),
-	glitch = Color3.fromRGB(255, 220, 60),
-	chatGreen = Color3.fromRGB(60, 220, 120),
-	uaiYellow = Color3.fromRGB(255, 210, 50),
-	green = Color3.fromRGB(40, 255, 140),
-	text = Color3.fromRGB(245, 235, 255),
-	textDim = Color3.fromRGB(170, 145, 195),
-	inputBg = Color3.fromRGB(14, 8, 24),
-	danger = Color3.fromRGB(255, 70, 100),
-	bubbleUser = Color3.fromRGB(42, 24, 62),
-	bubbleAi = Color3.fromRGB(20, 12, 34),
-	row = Color3.fromRGB(30, 16, 46),
-}
+local Theme = {}
+
+-- Fondo / paneles (vidrio oscuro)
+Theme.bg = Color3.fromRGB(2, 10, 20)
+Theme.panel = Color3.fromRGB(3, 18, 32)
+Theme.plate = Color3.fromRGB(6, 28, 48)
+Theme.sidebar = Color3.fromRGB(4, 14, 26)
+Theme.inputBg = Color3.fromRGB(5, 22, 38)
+Theme.row = Color3.fromRGB(8, 30, 50)
+
+-- Acentos cyan (idle / chat)
+Theme.border = Color3.fromRGB(53, 200, 255)
+Theme.accent = Color3.fromRGB(53, 200, 255)
+Theme.chatGreen = Color3.fromRGB(53, 200, 255)
+Theme.c2 = Color3.fromRGB(143, 230, 255)
+
+-- Trabajo UAI (amarillo)
+Theme.uaiYellow = Color3.fromRGB(255, 200, 60)
+Theme.glitch = Color3.fromRGB(255, 210, 80)
+
+-- Estados
+Theme.green = Color3.fromRGB(80, 255, 180)
+Theme.danger = Color3.fromRGB(255, 70, 90)
+
+-- Texto
+Theme.text = Color3.fromRGB(205, 239, 255)
+Theme.textDim = Color3.fromRGB(120, 180, 210)
+
+-- Burbujas
+Theme.bubbleUser = Color3.fromRGB(12, 40, 64)
+Theme.bubbleAi = Color3.fromRGB(6, 24, 40)
 
 function Theme.mkCorner(parent, r)
 	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, r or 8)
+	c.CornerRadius = UDim.new(0, r or 6)
 	c.Parent = parent
 	return c
 end
@@ -34,19 +46,16 @@ end
 function Theme.mkStroke(parent, color, thick, trans)
 	local s = Instance.new("UIStroke")
 	s.Color = color or Theme.border
-	s.Thickness = thick or 1.4
-	s.Transparency = trans or 0.25
+	s.Thickness = thick or 1.2
+	s.Transparency = trans or 0.35
 	s.Parent = parent
 	return s
 end
 
 function Theme.tween(obj, props, time, style)
 	local TweenService = game:GetService("TweenService")
-	local t = TweenService:Create(
-		obj,
-		TweenInfo.new(time or 0.22, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-		props
-	)
+	local info = TweenInfo.new(time or 0.22, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local t = TweenService:Create(obj, info, props)
 	t:Play()
 	return t
 end

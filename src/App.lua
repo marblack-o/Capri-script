@@ -1,6 +1,6 @@
 --[[
   App.lua
-  Que: orquesta modulos Config, Assets, Theme, Visual, UI_Chat, UAIBridge, Hack, Explorer.
+  Que: orquesta modulos JARVIS (Theme, Visual, UI_Chat, UAIBridge, Hack, Explorer).
 ]]
 
 local HttpService = game:GetService("HttpService")
@@ -8,9 +8,9 @@ local CoreGui = game:GetService("CoreGui")
 
 local App = {}
 
-local CAPRI_PROMPT = [[
-You are Capri (Project Capricorn) from Cyberpunk: Edgerunners 2.
-Companion inside this Roblox session. Playful chaos gremlin. Same language as the user.
+local JARVIS_PROMPT = [[
+You are J.A.R.V.I.S., an advanced systems assistant inside this Roblox session.
+Calm, precise, slightly witty. Same language as the user.
 "El juego" / "the game" = THIS live DataModel. Never ask which title.
 ]]
 
@@ -46,17 +46,14 @@ local function groqChat(apiKey, messages, maxTokens)
 	payload.temperature = 0.85
 	payload.max_tokens = maxTokens or 500
 	local body = HttpService:JSONEncode(payload)
-
 	local headers = {}
 	headers["Content-Type"] = "application/json"
 	headers["Authorization"] = "Bearer " .. apiKey
-
 	local opts = {}
 	opts.Url = API_URL
 	opts.Method = "POST"
 	opts.Headers = headers
 	opts.Body = body
-
 	local res = httpRequest(opts)
 	if not res or not res.Body then
 		return nil, "http_fail"
@@ -89,14 +86,16 @@ function App.start(modules, apiKey)
 	local Explorer = modules.Explorer
 
 	pcall(function()
-		local old = CoreGui:FindFirstChild("CapriUAI")
-		if old then
-			old:Destroy()
+		for _, name in ipairs({ "JarvisHUD", "CapriUAI" }) do
+			local old = CoreGui:FindFirstChild(name)
+			if old then
+				old:Destroy()
+			end
 		end
 	end)
 
 	local gui = Instance.new("ScreenGui")
-	gui.Name = "CapriUAI"
+	gui.Name = "JarvisHUD"
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.DisplayOrder = 999
@@ -141,19 +140,19 @@ function App.start(modules, apiKey)
 			if hack.mode == "idle" and text:sub(1, 1) == "!" and not hack.running then
 				local clean = text:sub(2):gsub("^%s+", ""):gsub("%s+$", "")
 				if clean == "" then
-					ui:addBubble("assistant", "Pon el trabajo tras '!'. Ej: !analiza el juego")
+					ui:addBubble("assistant", "Indica el trabajo tras '!'. Ej: !analiza el juego")
 					return
 				end
 				hack:begin(clean)
 				return
 			end
-			ui:setStatus(hack.running and "hack + charla" or "pensando...")
+			ui:setStatus(hack.running and "sistema + charla" or "pensando...")
 			visual:setExpression("talking")
 			local ch = ui:getActiveChat()
 			local msgs = {}
 			local sys = {}
 			sys.role = "system"
-			sys.content = CAPRI_PROMPT
+			sys.content = JARVIS_PROMPT
 			table.insert(msgs, sys)
 			for _, m in ipairs(ch.messages or {}) do
 				if m.role == "user" or m.role == "assistant" then
@@ -171,7 +170,7 @@ function App.start(modules, apiKey)
 			else
 				ui:addBubble("assistant", reply)
 				visual:setExpression(hack.running and "hack" or "idle")
-				ui:setStatus(hack.running and "hackeando" or "chat")
+				ui:setStatus(hack.running and "en el sistema" or "chat")
 			end
 		end)
 	end
@@ -193,7 +192,7 @@ function App.start(modules, apiKey)
 	hackOpts.visual = visual
 	hackOpts.apiKey = apiKey
 	hackOpts.groqChat = groqChat
-	hackOpts.capriPrompt = CAPRI_PROMPT
+	hackOpts.capriPrompt = JARVIS_PROMPT
 	hack = Hack.new(hackOpts)
 
 	visual.onClick = function()
@@ -203,10 +202,10 @@ function App.start(modules, apiKey)
 
 	task.spawn(function()
 		local ok = UAIBridge.ensure(false)
-		print(ok and "[Capri] UAI preload OK" or "[Capri] UAI bajo demanda")
+		print(ok and "[JARVIS] UAI preload OK" or "[JARVIS] UAI bajo demanda")
 	end)
 
-	print("[Capri] App modular lista (Visual · UI_Chat · Explorer · UAIBridge · Hack)")
+	print("[JARVIS] Sistemas en linea.")
 end
 
 function App.boot(modules)
@@ -215,20 +214,22 @@ function App.boot(modules)
 	local cfg = Config.load()
 	local key = cfg.groq_key
 	if type(key) == "string" and key ~= "" then
-		print("[Capri] Key local OK.")
+		print("[JARVIS] Key local OK.")
 		App.start(modules, key)
 		return
 	end
 
 	pcall(function()
-		local old = CoreGui:FindFirstChild("CapriUAI")
-		if old then
-			old:Destroy()
+		for _, name in ipairs({ "JarvisHUD", "CapriUAI" }) do
+			local old = CoreGui:FindFirstChild(name)
+			if old then
+				old:Destroy()
+			end
 		end
 	end)
 
 	local gui = Instance.new("ScreenGui")
-	gui.Name = "CapriUAI"
+	gui.Name = "JarvisHUD"
 	gui.ResetOnSpawn = false
 	gui.DisplayOrder = 999
 	gui.IgnoreGuiInset = true
@@ -249,7 +250,7 @@ function App.boot(modules)
 	t.Size = UDim2.new(1, -24, 0, 28)
 	t.Position = UDim2.fromOffset(12, 14)
 	t.BackgroundTransparency = 1
-	t.Text = "Capri - Groq key"
+	t.Text = "J.A.R.V.I.S. - Groq key"
 	t.TextColor3 = Theme.accent
 	t.Font = Enum.Font.GothamBold
 	t.TextSize = 18

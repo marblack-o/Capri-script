@@ -1,11 +1,11 @@
 --[[
   loader-allinone.lua
-  Que: bootstrap Capri/JARVIS modular v7.3.0 (esfera Claude)
+  Que: bootstrap J.A.R.V.I.S. modular v8.0.0
 ]]
 
-print("[Capri] Loader modular v7.3.0 (Jarvis sphere)...")
+print("[JARVIS] Loader modular v8.0.0...")
 
-local BASE = "https://raw.githubusercontent.com/marblack-o/JARVIS-script/6a1b44ce29cfb079f107725eb7f1470c90e8ec7e/"
+local BASE = "https://raw.githubusercontent.com/marblack-o/JARVIS-script/846eb13cab370026c54bbc04f434ee6dd2b30057/"
 
 local function fetch(path)
 	local url = BASE .. path
@@ -20,7 +20,7 @@ local function fetch(path)
 		end
 	end
 	if not body or body == "" then
-		error("[Capri] No se pudo descargar " .. path)
+		error("[JARVIS] No se pudo descargar " .. path)
 	end
 	return body
 end
@@ -28,9 +28,9 @@ end
 local function loadMod(path)
 	local src = fetch(path)
 	local fn, err = loadstring(src, path)
-	if not fn then error("[Capri] compile " .. path .. ": " .. tostring(err)) end
+	if not fn then error("[JARVIS] compile " .. path .. ": " .. tostring(err)) end
 	local ok, mod = pcall(fn)
-	if not ok then error("[Capri] run " .. path .. ": " .. tostring(mod)) end
+	if not ok then error("[JARVIS] run " .. path .. ": " .. tostring(mod)) end
 	return mod
 end
 

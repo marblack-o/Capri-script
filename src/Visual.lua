@@ -1,10 +1,7 @@
 --[[
   Visual.lua
-  Que: HUD Jarvis (esfera de puntos + anillos + nodo orbital).
-  Adaptado del LocalScript Claude a la API Capri:
-    Visual.new(gui, Assets, Theme)
-    visual.onClick / setExpression / setFace / flashCutin
-  Chat real sigue en UI_Chat (el nodo solo abre el panel).
+  Que: HUD J.A.R.V.I.S. (esfera, anillos, nodo orbital, sombra).
+  Click en nodo O en la esfera abre el chat (UI_Chat.toggle).
 ]]
 
 local RunService = game:GetService("RunService")
@@ -21,6 +18,7 @@ local C2 = Color3.fromRGB(143, 230, 255)
 local C_HACK = Color3.fromRGB(255, 200, 60)
 local C_ERR = Color3.fromRGB(255, 70, 90)
 local C_DONE = Color3.fromRGB(80, 255, 180)
+local C_SHADOW = Color3.fromRGB(4, 18, 40)
 local NAME = "J.A.R.V.I.S."
 
 local LABEL = {}
@@ -54,6 +52,12 @@ function Visual.new(gui, Assets, Theme)
 	return self
 end
 
+function Visual:_fireClick()
+	if type(self.onClick) == "function" then
+		self.onClick()
+	end
+end
+
 function Visual:_build()
 	local gui = self.gui
 	local CENTER = Vector2.new(0.5, 0.5)
@@ -78,21 +82,40 @@ function Visual:_build()
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize)
 	task.defer(resize)
 
-	local function circle(parent, scale, thick, transp)
+	-- Sombra azul oscura detras de la esfera
+	local shadow = mk("Frame", {
+		Name = "Shadow",
+		AnchorPoint = CENTER,
+		Position = UDim2.new(0.5, 6, 0.5, 8),
+		Size = UDim2.fromScale(0.78, 0.78),
+		BackgroundColor3 = C_SHADOW,
+		BackgroundTransparency = 0.25,
+		BorderSizePixel = 0,
+		ZIndex = 9,
+	}, stage)
+	mk("UICorner", { CornerRadius = UDim.new(1, 0) }, shadow)
+	local shadowStroke = mk("UIStroke", {
+		Color = Color3.fromRGB(20, 60, 100),
+		Thickness = 8,
+		Transparency = 0.55,
+	}, shadow)
+	self.shadow = shadow
+
+	local function circle(parent, scale, thick, transp, z)
 		local f = mk("Frame", {
 			AnchorPoint = CENTER,
 			Position = UDim2.fromScale(0.5, 0.5),
 			Size = UDim2.fromScale(scale, scale),
 			BackgroundTransparency = 1,
-			ZIndex = 10,
+			ZIndex = z or 10,
 		}, parent)
 		mk("UICorner", { CornerRadius = UDim.new(1, 0) }, f)
 		local st = mk("UIStroke", { Color = C, Thickness = thick, Transparency = transp }, f)
 		return f, st
 	end
 
-	local _, orbitStroke = circle(stage, 0.95, 1, 0.7)
-	local _, midStroke = circle(stage, 0.66, 1, 0.45)
+	local _, orbitStroke = circle(stage, 0.95, 1, 0.7, 10)
+	local _, midStroke = circle(stage, 0.66, 1, 0.45, 10)
 	self.orbitStroke = orbitStroke
 	self.midStroke = midStroke
 
@@ -122,6 +145,21 @@ function Visual:_build()
 
 	self.ringTicks = segRing(0.42, 56, 2, 7, -90, 0.35)
 	self.ringArcs = segRing(0.375, 14, 28, 3, 0, 0.15)
+
+	-- Boton invisible grande sobre la esfera (abre chat)
+	local hit = mk("TextButton", {
+		Name = "SphereHit",
+		AnchorPoint = CENTER,
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(0.72, 0.72),
+		BackgroundTransparency = 1,
+		Text = "",
+		AutoButtonColor = false,
+		ZIndex = 18,
+	}, stage)
+	hit.Activated:Connect(function()
+		self:_fireClick()
+	end)
 
 	local sphere = mk("Frame", {
 		Size = UDim2.fromScale(1, 1),
@@ -191,22 +229,28 @@ function Visual:_build()
 
 	local node = mk("TextButton", {
 		AnchorPoint = CENTER,
-		Size = UDim2.fromOffset(22, 22),
+		Size = UDim2.fromOffset(26, 26),
 		Text = "",
 		AutoButtonColor = false,
 		BackgroundColor3 = C2,
-		ZIndex = 20,
+		ZIndex = 25,
 	}, stage)
 	mk("UICorner", { CornerRadius = UDim.new(1, 0) }, node)
 	mk("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5 }, node)
 	self.node = node
+	node.Activated:Connect(function()
+		self:_fireClick()
+	end)
+	node.MouseButton1Click:Connect(function()
+		self:_fireClick()
+	end)
 
 	local pulse = mk("Frame", {
 		AnchorPoint = CENTER,
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
-		ZIndex = 19,
+		ZIndex = 24,
 	}, node)
 	mk("UICorner", { CornerRadius = UDim.new(1, 0) }, pulse)
 	mk("UIStroke", { Color = C, Thickness = 1.5 }, pulse)
@@ -224,7 +268,7 @@ function Visual:_build()
 		Position = UDim2.new(1, 8, 0.5, -8),
 		Size = UDim2.fromOffset(40, 16),
 		TextXAlignment = Enum.TextXAlignment.Left,
-		ZIndex = 21,
+		ZIndex = 26,
 	}, node)
 
 	local title = mk("TextLabel", {
@@ -253,12 +297,6 @@ function Visual:_build()
 	}, stage)
 	self.status = status
 
-	local function fireClick()
-		if self.onClick then
-			self.onClick()
-		end
-	end
-	node.MouseButton1Click:Connect(fireClick)
 	node.MouseEnter:Connect(function()
 		self._hover = true
 		TweenService:Create(nodeLabel, TweenInfo.new(0.2), { TextTransparency = 0 }):Play()
@@ -268,7 +306,7 @@ function Visual:_build()
 		TweenService:Create(nodeLabel, TweenInfo.new(0.2), { TextTransparency = 1 }):Play()
 	end)
 
-	-- Arrastrar el stage (opcional)
+	-- Arrastre del stage (si no fue click corto, no abre chat)
 	local dragging, moved, start, startPos = false, false, nil, nil
 	stage.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -289,14 +327,13 @@ function Visual:_build()
 		end
 		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
 			local d = input.Position - start
-			if math.abs(d.X) > 6 or math.abs(d.Y) > 6 then
+			if math.abs(d.X) > 8 or math.abs(d.Y) > 8 then
 				moved = true
+				stage.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
 			end
-			stage.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
 		end
 	end)
 
-	-- Animacion
 	self._speed = 1
 	self._rot = 0
 	self._t = 0
@@ -307,7 +344,7 @@ function Visual:_build()
 
 	RunService.RenderStepped:Connect(function(dt)
 		local target = 1
-		if self.state == "hack" or self.state == "thinking" then
+		if self.state == "hack" then
 			target = 3.2
 		elseif self.state == "talking" then
 			target = 1.7
@@ -337,7 +374,13 @@ function Visual:_build()
 			Z = p.Y * stn + Z * ct
 			q.d.Position = UDim2.fromScale(0.5 + X * R, 0.5 + Y * R)
 			q.d.BackgroundTransparency = 1 - (0.12 + 0.75 * (Z + 1) / 2)
-			q.d.BackgroundColor3 = self.accent == C_HACK and C_HACK or (self.accent == C_ERR and C_ERR or C2)
+			if self.accent == C_HACK then
+				q.d.BackgroundColor3 = C_HACK
+			elseif self.accent == C_ERR then
+				q.d.BackgroundColor3 = C_ERR
+			else
+				q.d.BackgroundColor3 = C2
+			end
 		end
 
 		core.Size = UDim2.fromScale(0.12 * (1 + amp * 3), 0.12 * (1 + amp * 3))

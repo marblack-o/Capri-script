@@ -5,6 +5,7 @@
 
 local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 
 local App = {}
 
@@ -73,6 +74,99 @@ local function groqChat(apiKey, messages, maxTokens)
 		return content, nil
 	end
 	return nil, "empty"
+end
+
+local function attachNetBG(content, Theme)
+	if not content then
+		return
+	end
+	local net = Instance.new("Frame")
+	net.Name = "NetBG"
+	net.Size = UDim2.fromScale(1, 1)
+	net.BackgroundTransparency = 1
+	net.ZIndex = 22
+	net.ClipsDescendants = true
+	net.Parent = content
+	local nodes = {}
+	for i = 1, 18 do
+		local n = Instance.new("Frame")
+		n.AnchorPoint = Vector2.new(0.5, 0.5)
+		n.Size = UDim2.fromOffset(3, 3)
+		n.BackgroundColor3 = Theme.accent
+		n.BackgroundTransparency = 0.35
+		n.BorderSizePixel = 0
+		n.ZIndex = 22
+		n.Parent = net
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(1, 0)
+		c.Parent = n
+		local px = math.random()
+		local py = math.random()
+		local vx = (math.random() - 0.5) * 0.04
+		local vy = (math.random() - 0.5) * 0.04
+		n.Position = UDim2.fromScale(px, py)
+		nodes[i] = { f = n, x = px, y = py, vx = vx, vy = vy }
+	end
+	local lines = {}
+	for i = 1, 22 do
+		local l = Instance.new("Frame")
+		l.AnchorPoint = Vector2.new(0, 0.5)
+		l.BackgroundColor3 = Theme.accent
+		l.BackgroundTransparency = 0.82
+		l.BorderSizePixel = 0
+		l.ZIndex = 22
+		l.Size = UDim2.fromOffset(20, 1)
+		l.Visible = false
+		l.Parent = net
+		lines[i] = l
+	end
+	RunService.RenderStepped:Connect(function(dt)
+		if not content.Parent or not net.Parent then
+			return
+		end
+		local abs = content.AbsoluteSize
+		if abs.X < 2 or abs.Y < 2 then
+			return
+		end
+		for _, n in ipairs(nodes) do
+			n.x = n.x + n.vx * dt
+			n.y = n.y + n.vy * dt
+			if n.x < 0.02 or n.x > 0.98 then
+				n.vx = -n.vx
+			end
+			if n.y < 0.02 or n.y > 0.98 then
+				n.vy = -n.vy
+			end
+			n.x = math.clamp(n.x, 0.02, 0.98)
+			n.y = math.clamp(n.y, 0.02, 0.98)
+			n.f.Position = UDim2.fromScale(n.x, n.y)
+		end
+		local li = 1
+		for a = 1, #nodes do
+			for b = a + 1, #nodes do
+				if li > #lines then
+					break
+				end
+				local na = nodes[a]
+				local nb = nodes[b]
+				local dx = (nb.x - na.x) * abs.X
+				local dy = (nb.y - na.y) * abs.Y
+				local dist = math.sqrt(dx * dx + dy * dy)
+				if dist < 110 and dist > 1 then
+					local line = lines[li]
+					line.Visible = true
+					line.Position = UDim2.fromScale(na.x, na.y)
+					line.Size = UDim2.fromOffset(dist, 1)
+					line.Rotation = math.deg(math.atan2(dy, dx))
+					line.BackgroundTransparency = 0.75 + (dist / 110) * 0.2
+					li = li + 1
+				end
+			end
+		end
+		for j = li, #lines do
+			lines[j].Visible = false
+		end
+	end)
 end
 
 function App.start(modules, apiKey)
@@ -177,6 +271,32 @@ function App.start(modules, apiKey)
 
 	ui = UI_Chat.new(uiOpts)
 
+	-- Titulos oficiales JARVIS (por si el modulo aun dice Capri)
+	pcall(function()
+		if ui.window then
+			ui.window.Name = "JarvisWorkbench"
+		end
+		if ui.titleLbl then
+			ui.titleLbl.Text = "J.A.R.V.I.S."
+		end
+		local oldSet = ui.setStatus
+		if type(oldSet) == "function" then
+			function ui:setStatus(txt)
+				oldSet(self, txt)
+				if self.titleLbl then
+					local working = tostring(txt):find("hack") or tostring(txt):find("sistema") or tostring(txt):find("espera")
+					if working then
+						self.titleLbl.Text = "J.A.R.V.I.S. · sistema"
+					else
+						self.titleLbl.Text = "J.A.R.V.I.S."
+					end
+				end
+			end
+		end
+	end)
+
+	attachNetBG(ui.content, Theme)
+
 	if Explorer and type(Explorer.render) == "function" then
 		function ui:buildFiles()
 			Explorer.render(self.filesPane, self.Theme, self.UAI)
@@ -196,6 +316,7 @@ function App.start(modules, apiKey)
 	hack = Hack.new(hackOpts)
 
 	visual.onClick = function()
+		print("[JARVIS] toggle chat")
 		ui:toggle()
 	end
 	visual:setExpression("idle")

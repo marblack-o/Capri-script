@@ -1,11 +1,11 @@
 --[[
   loader-allinone.lua
-  Que: bootstrap J.A.R.V.I.S. modular v8.0.0
+  Que: bootstrap J.A.R.V.I.S. modular v8.1.0 (HUD Claude)
 ]]
 
-print("[JARVIS] Loader modular v8.0.0...")
+print("[JARVIS] Loader modular v8.1.0 (HUD Claude)...")
 
-local BASE = "https://raw.githubusercontent.com/marblack-o/JARVIS-script/846eb13cab370026c54bbc04f434ee6dd2b30057/"
+local BASE = "https://raw.githubusercontent.com/marblack-o/JARVIS-script/cf42c98ae6b9512ef91ac5ddb5cf00fd251b94e9/"
 
 local function fetch(path)
 	local url = BASE .. path
